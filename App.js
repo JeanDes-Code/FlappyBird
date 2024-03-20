@@ -1,5 +1,13 @@
 import { Canvas, Image, useImage } from '@shopify/react-native-skia';
+import { useEffect } from 'react';
 import { useWindowDimensions } from 'react-native';
+import {
+  useSharedValue,
+  withTiming,
+  Easing,
+  withSequence,
+  withRepeat,
+} from 'react-native-reanimated';
 
 const App = () => {
   const { width, height } = useWindowDimensions();
@@ -9,8 +17,24 @@ const App = () => {
   const greenPipeBottom = useImage(require('./assets/sprites/pipe-green.png'));
   const greenPipeTop = useImage(require('./assets/sprites/pipe-green-top.png'));
   const base = useImage(require('./assets/sprites/base.png'));
-
   const bird = useImage(require('./assets/sprites/yellowbird-upflap.png'));
+
+  const x = useSharedValue(width);
+
+  useEffect(() => {
+    x.value = withRepeat(
+      withSequence(
+        withTiming(-150, {
+          duration: 3000,
+          easing: Easing.linear,
+        }),
+        withTiming(width, {
+          duration: 0,
+        }),
+      ),
+      -1,
+    );
+  }, []);
 
   const pipeOffset = 0;
 
@@ -20,8 +44,6 @@ const App = () => {
       <Image
         image={backgroundImage}
         fit='cover'
-        x={0}
-        y={0}
         width={width}
         height={height}
       />
@@ -29,7 +51,7 @@ const App = () => {
       {/* Pipes */}
       <Image
         image={greenPipeBottom}
-        x={width / 2}
+        x={x}
         y={height - 320 + pipeOffset}
         width={103}
         height={640}
@@ -37,12 +59,13 @@ const App = () => {
       />
       <Image
         image={greenPipeTop}
-        x={width / 2}
+        x={x}
         y={pipeOffset - 320}
         width={103}
         height={640}
         fit='contain'
       />
+
       {/* base */}
       <Image
         image={base}
