@@ -1,6 +1,15 @@
-import { Canvas, Group, Image, useImage } from '@shopify/react-native-skia';
-import { useEffect } from 'react';
-import { useWindowDimensions } from 'react-native';
+import {
+  Canvas,
+  Fill,
+  FontWeight,
+  Group,
+  Image,
+  matchFont,
+  Text,
+  useImage,
+} from '@shopify/react-native-skia';
+import { useEffect, useState } from 'react';
+import { Platform, useWindowDimensions } from 'react-native';
 import {
   useSharedValue,
   withTiming,
@@ -11,6 +20,8 @@ import {
   useDerivedValue,
   interpolate,
   Extrapolation,
+  useAnimatedReaction,
+  runOnJS,
 } from 'react-native-reanimated';
 import {
   GestureHandlerRootView,
@@ -23,6 +34,9 @@ const JUMP_FORCE = -500;
 
 const App = () => {
   const { width, height } = useWindowDimensions();
+
+  const [score, setScore] = useState(0);
+
   const backgroundImage = useImage(
     require('./assets/sprites/background-day.png'),
   );
@@ -33,8 +47,54 @@ const App = () => {
 
   const x = useSharedValue(width);
 
+  const birdX = width / 4;
   const birdY = useSharedValue(height / 3);
   const birdYVelocity = useSharedValue(0);
+  const pipeWidth = 103;
+
+  useEffect(() => {
+    x.value = withRepeat(
+      withSequence(
+        withTiming(-150, {
+          duration: 3000,
+          easing: Easing.linear,
+        }),
+        withTiming(width, {
+          duration: 0,
+        }),
+      ),
+      -1,
+    );
+  }, []);
+
+  useAnimatedReaction(
+    () => x.value,
+    (currentValue, previousValue = 0) => {
+      const middleScreen = birdX - pipeWidth;
+      if (
+        currentValue !== previousValue &&
+        previousValue &&
+        currentValue <= middleScreen &&
+        previousValue > middleScreen
+      ) {
+        runOnJS(setScore)(score + 1);
+      }
+    },
+  );
+
+  useFrameCallback(({ timeSincePreviousFrame: dt }) => {
+    if (!dt) {
+      return;
+    }
+
+    birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
+    birdYVelocity.value = birdYVelocity.value + (GRAVITY * dt) / 1000;
+  });
+
+  const gesture = Gesture.Tap().onStart(() => {
+    birdYVelocity.value = JUMP_FORCE;
+  });
+
   const birdTransform = useDerivedValue(() => {
     return [
       {
@@ -54,35 +114,16 @@ const App = () => {
     };
   });
 
-  useFrameCallback(({ timeSincePreviousFrame: dt }) => {
-    if (!dt) {
-      return;
-    }
-
-    birdY.value = birdY.value + (birdYVelocity.value * dt) / 1000;
-    birdYVelocity.value = birdYVelocity.value + (GRAVITY * dt) / 1000;
-  });
-
-  useEffect(() => {
-    x.value = withRepeat(
-      withSequence(
-        withTiming(-150, {
-          duration: 3000,
-          easing: Easing.linear,
-        }),
-        withTiming(width, {
-          duration: 0,
-        }),
-      ),
-      -1,
-    );
-  }, []);
-
-  const gesture = Gesture.Tap().onStart(() => {
-    birdYVelocity.value = JUMP_FORCE;
-  });
-
   const pipeOffset = 0;
+  const fontFamily = Platform.select({ ios: 'Helvetica', default: 'serif' });
+
+  const fontStyle = {
+    fontFamily,
+    fontSize: 50,
+    FontWeight: 'bold',
+  };
+
+  const font = matchFont(fontStyle);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -101,7 +142,7 @@ const App = () => {
             image={greenPipeBottom}
             x={x}
             y={height - 320 + pipeOffset}
-            width={103}
+            width={pipeWidth}
             height={640}
             fit='contain'
           />
@@ -109,7 +150,7 @@ const App = () => {
             image={greenPipeTop}
             x={x}
             y={pipeOffset - 320}
-            width={103}
+            width={pipeWidth}
             height={640}
             fit='contain'
           />
@@ -131,13 +172,22 @@ const App = () => {
           >
             <Image
               image={bird}
-              x={width / 4}
+              x={birdX}
               y={birdY}
               width={64}
               height={48}
               fit='contain'
             />
           </Group>
+
+          {/* Score */}
+          <Text
+            x={width / 2 - fontStyle.fontSize / 2}
+            y={100}
+            text={`${score.toLocaleString()}`}
+            font={font}
+            color='white'
+          />
         </Canvas>
       </GestureDetector>
     </GestureHandlerRootView>
