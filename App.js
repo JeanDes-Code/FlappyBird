@@ -61,13 +61,18 @@ const App = () => {
   const baseHeight = 150;
   const pipeWidth = 103;
   const pipeHeight = 640;
-  const pipeOffset = 0;
+  const pipeOffset = useSharedValue(0);
+  const topPipeY = useDerivedValue(() => pipeOffset.value - pipeHeight / 2);
+  const bottomPipeY = useDerivedValue(
+    () => height - pipeHeight / 2 + pipeOffset.value,
+  );
+
   const obstacles = useDerivedValue(() => {
     const allObstacles = [];
     // add bottom pipe
     allObstacles.push({
       x: x.value,
-      y: height - pipeHeight / 2 + pipeOffset,
+      y: height - pipeHeight / 2 + pipeOffset.value,
       h: pipeHeight,
       w: pipeWidth,
     });
@@ -75,7 +80,7 @@ const App = () => {
     // add top pipe
     allObstacles.push({
       x: x.value,
-      y: pipeOffset - pipeHeight / 2,
+      y: pipeOffset.value - pipeHeight / 2,
       h: pipeHeight,
       w: pipeWidth,
     });
@@ -107,6 +112,12 @@ const App = () => {
     () => x.value,
     (currentValue, previousValue = 0) => {
       const middleScreen = birdX - pipeWidth;
+
+      // Change offset for the next pipe
+      if (previousValue && currentValue < -100 && previousValue > -100) {
+        pipeOffset.value = Math.random() * 400 - 200;
+      }
+
       if (
         currentValue !== previousValue &&
         previousValue &&
@@ -236,7 +247,7 @@ const App = () => {
           <Image
             image={greenPipeBottom}
             x={x}
-            y={height - pipeHeight / 2 + pipeOffset}
+            y={bottomPipeY}
             width={pipeWidth}
             height={pipeHeight}
             fit='contain'
@@ -245,7 +256,7 @@ const App = () => {
           <Image
             image={greenPipeTop}
             x={x}
-            y={pipeOffset - pipeHeight / 2}
+            y={topPipeY}
             width={pipeWidth}
             height={pipeHeight}
             fit='contain'
@@ -286,7 +297,7 @@ const App = () => {
           />
           <Rect
             x={x}
-            y={height - 320 + pipeOffset}
+            y={height - 320 + pipeOffset.value}
             width={pipeWidth}
             height={pipeHeight}
             color='red'
@@ -294,7 +305,7 @@ const App = () => {
           />
           <Rect
             x={x}
-            y={pipeOffset - pipeHeight / 2}
+            y={pipeOffset.value - pipeHeight / 2}
             width={pipeWidth}
             height={pipeHeight}
             color='red'
