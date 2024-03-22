@@ -1,12 +1,8 @@
 import {
   Canvas,
-  Circle,
-  Fill,
-  FontWeight,
   Group,
   Image,
   matchFont,
-  Rect,
   Text,
   useImage,
 } from '@shopify/react-native-skia';
@@ -49,14 +45,12 @@ const App = () => {
   const bird = useImage(require('./assets/sprites/yellowbird-upflap.png'));
 
   const gameOver = useSharedValue(false);
-  const x = useSharedValue(width);
+  const pipeX = useSharedValue(width);
 
   const birdX = width / 4;
   const birdY = useSharedValue(height / 3);
-  const birdYVelocity = useSharedValue(0);
 
-  const birdCenterX = useDerivedValue(() => birdX + 32);
-  const birdCenterY = useDerivedValue(() => birdY.value + 24);
+  const birdYVelocity = useSharedValue(0);
 
   const baseHeight = 150;
   const pipeWidth = 103;
@@ -67,33 +61,29 @@ const App = () => {
     () => height - pipeHeight / 2 + pipeOffset.value,
   );
 
-  const obstacles = useDerivedValue(() => {
-    const allObstacles = [];
-    // add bottom pipe
-    allObstacles.push({
-      x: x.value,
+  const obstacles = useDerivedValue(() => [
+    // Bottom pipe
+    {
+      x: pipeX.value,
       y: height - pipeHeight / 2 + pipeOffset.value,
       h: pipeHeight,
       w: pipeWidth,
-    });
-
-    // add top pipe
-    allObstacles.push({
-      x: x.value,
+    },
+    // Top pipe
+    {
+      x: pipeX.value,
       y: pipeOffset.value - pipeHeight / 2,
       h: pipeHeight,
       w: pipeWidth,
-    });
-
-    return allObstacles;
-  });
+    },
+  ]);
 
   useEffect(() => {
     mapMovement();
   }, []);
 
   const mapMovement = () => {
-    x.value = withRepeat(
+    pipeX.value = withRepeat(
       withSequence(
         withTiming(-150, {
           duration: 3000,
@@ -109,7 +99,7 @@ const App = () => {
 
   // Score logic
   useAnimatedReaction(
-    () => x.value,
+    () => pipeX.value,
     (currentValue, previousValue = 0) => {
       const middleScreen = birdX - pipeWidth;
 
@@ -145,6 +135,11 @@ const App = () => {
     () => birdY.value,
     // Ground collision detection
     (currentValue, previousValue) => {
+      const center = {
+        x: birdX + 32,
+        y: birdY.value + 24,
+      };
+
       if (currentValue > height - baseHeight + 24 || currentValue < 0) {
         gameOver.value = true;
       }
@@ -152,10 +147,7 @@ const App = () => {
       // Pipe collision detection
 
       const isColliding = obstacles.value.some((rect) =>
-        isPointCollidingWithRect(
-          { x: birdCenterX.value, y: birdCenterY.value },
-          rect,
-        ),
+        isPointCollidingWithRect(center, rect),
       );
 
       if (isColliding) {
@@ -169,7 +161,7 @@ const App = () => {
     () => gameOver.value,
     (currentValue, previousValue) => {
       if (currentValue && !previousValue) {
-        cancelAnimation(x);
+        cancelAnimation(pipeX);
       }
     },
   );
@@ -188,7 +180,7 @@ const App = () => {
     birdY.value = height / 3;
     birdYVelocity.value = 0;
     gameOver.value = false;
-    x.value = width;
+    pipeX.value = width;
     runOnJS(mapMovement)();
 
     runOnJS(setScore)(0);
@@ -246,7 +238,7 @@ const App = () => {
           {/* Pipes */}
           <Image
             image={greenPipeBottom}
-            x={x}
+            x={pipeX}
             y={bottomPipeY}
             width={pipeWidth}
             height={pipeHeight}
@@ -255,7 +247,7 @@ const App = () => {
 
           <Image
             image={greenPipeTop}
-            x={x}
+            x={pipeX}
             y={topPipeY}
             width={pipeWidth}
             height={pipeHeight}
@@ -286,31 +278,6 @@ const App = () => {
               fit='contain'
             />
           </Group>
-
-          {/* Sim */}
-          {/* <Circle
-            cx={birdCenterX}
-            cy={birdCenterY}
-            r={25}
-            color='white'
-            opacity={0.4}
-          />
-          <Rect
-            x={x}
-            y={height - 320 + pipeOffset.value}
-            width={pipeWidth}
-            height={pipeHeight}
-            color='red'
-            opacity={0.4}
-          />
-          <Rect
-            x={x}
-            y={pipeOffset.value - pipeHeight / 2}
-            width={pipeWidth}
-            height={pipeHeight}
-            color='red'
-            opacity={0.4}
-          /> */}
 
           {/* Score */}
           <Text
