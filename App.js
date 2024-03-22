@@ -60,6 +60,9 @@ const App = () => {
   const bottomPipeY = useDerivedValue(
     () => height - pipeHeight / 2 + pipeOffset.value,
   );
+  const pipeSpeed = useDerivedValue(() => {
+    return interpolate(score, [0, 20], [1, 2]);
+  });
 
   const obstacles = useDerivedValue(() => [
     // Bottom pipe
@@ -83,17 +86,13 @@ const App = () => {
   }, []);
 
   const mapMovement = () => {
-    pipeX.value = withRepeat(
-      withSequence(
-        withTiming(-150, {
-          duration: 3000,
-          easing: Easing.linear,
-        }),
-        withTiming(width, {
-          duration: 0,
-        }),
-      ),
-      -1,
+    pipeX.value = withSequence(
+      withTiming(width, { duration: 0 }),
+      withTiming(-150, {
+        duration: 3000 / pipeSpeed.value,
+        easing: Easing.linear,
+      }),
+      withTiming(width, { duration: 0 }),
     );
   };
 
@@ -106,6 +105,8 @@ const App = () => {
       // Change offset for the next pipe
       if (previousValue && currentValue < -100 && previousValue > -100) {
         pipeOffset.value = Math.random() * 400 - 200;
+        cancelAnimation(pipeX);
+        runOnJS(mapMovement)();
       }
 
       if (
@@ -182,7 +183,6 @@ const App = () => {
     gameOver.value = false;
     pipeX.value = width;
     runOnJS(mapMovement)();
-
     runOnJS(setScore)(0);
   };
 
